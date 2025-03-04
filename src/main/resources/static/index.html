@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频加密解密</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 500px;
+            max-width: 100%;
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 5px;
+        }
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 10px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-size: 16px;
+            width: 100%;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 12px;
+            color: #aaa;
+        }
+        .error-message {
+            color: red;
+            text-align: center;
+            margin-top: 10px;
+        }
+        .notification {
+            background-color: #28a745;
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            display: none;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            font-size: 16px;
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <!-- 上传原视频和涉密视频 -->
+    <h2>上传原视频和涉密视频生成加密视频</h2>
+    <form id="encryptionForm" method="post" enctype="multipart/form-data">
+        <div class="form-group">
+            <label for="originalVideo">选择原视频:</label>
+            <input type="file" id="originalVideo" name="originalVideo" required>
+        </div>
+
+        <div class="form-group">
+            <label for="secretVideo">选择涉密视频:</label>
+            <input type="file" id="secretVideo" name="secretVideo" required>
+        </div>
+
+        <button type="button" onclick="encryptVideo()">生成加密视频</button>
+        <div id="encryptError" class="error-message"></div>
+        <div id="encryptNotification" class="notification">视频加密成功！</div>
+        <div id="encryptLoading" class="loading">正在加密，请稍候...</div>
+    </form>
+
+    <br>
+
+    <!-- 上传加密后的视频进行解密 -->
+    <h2>上传加密后的视频并解密</h2>
+    <form id="decryptionForm" method="post" enctype="multipart/form-data">
+        <div class="form-group">
+            <label for="encryptedVideo">选择加密视频:</label>
+            <input type="file" id="encryptedVideo" name="encryptedVideo" required>
+        </div>
+
+        <button type="button" onclick="decryptVideo()">解密出涉密视频</button>
+        <div id="decryptError" class="error-message"></div>
+        <div id="decryptNotification" class="notification">视频解密成功！</div>
+        <div id="decryptLoading" class="loading">正在解密，请稍候...</div>
+    </form>
+
+</div>
+
+<script>
+    function encryptVideo() {
+        const originalVideo = document.getElementById('originalVideo').files[0];
+        const secretVideo = document.getElementById('secretVideo').files[0];
+        const errorMessage = document.getElementById('encryptError');
+        const notification = document.getElementById('encryptNotification');
+        const loading = document.getElementById('encryptLoading');
+
+        // 验证是否选择了文件
+        if (!originalVideo || !secretVideo) {
+            errorMessage.textContent = '请确保选择了原视频和涉密视频。';
+            return;
+        } else {
+            errorMessage.textContent = ''; // 清除错误消息
+        }
+
+        loading.style.display = 'block'; // 显示加载状态
+        notification.style.display = 'none'; // 隐藏成功通知
+
+        const formData = new FormData();
+        formData.append('originalVideo', originalVideo);
+        formData.append('secretVideo', secretVideo);
+
+        fetch('http://localhost:8080/api/encrypt', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.blob())
+            .then(data => {
+                loading.style.display = 'none'; // 隐藏加载状态
+                notification.style.display = 'block'; // 显示成功通知
+
+                const url = window.URL.createObjectURL(data);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'encrypted_video.mp4';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            })
+            .catch(error => {
+                loading.style.display = 'none'; // 隐藏加载状态
+                errorMessage.textContent = '加密过程中发生错误，请重试。';
+                console.error('Error:', error);
+            });
+    }
+
+    function decryptVideo() {
+        const encryptedVideo = document.getElementById('encryptedVideo').files[0];
+        const errorMessage = document.getElementById('decryptError');
+        const notification = document.getElementById('decryptNotification');
+        const loading = document.getElementById('decryptLoading');
+
+        // 验证是否选择了文件
+        if (!encryptedVideo) {
+            errorMessage.textContent = '请确保选择了加密视频。';
+            return;
+        } else {
+            errorMessage.textContent = ''; // 清除错误消息
+        }
+
+        loading.style.display = 'block'; // 显示加载状态
+        notification.style.display = 'none'; // 隐藏成功通知
+
+        const formData = new FormData();
+        formData.append('encryptedVideo', encryptedVideo);
+
+        fetch('http://localhost:8080/api/decrypt', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.blob())
+            .then(data => {
+                loading.style.display = 'none'; // 隐藏加载状态
+                notification.style.display = 'block'; // 显示成功通知
+
+                const url = window.URL.createObjectURL(data);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'decrypted_video.mp4';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            })
+            .catch(error => {
+                loading.style.display = 'none'; // 隐藏加载状态
+                errorMessage.textContent = '解密过程中发生错误，请重试。';
+                console.error('Error:', error);
+            });
+    }
+</script>
+
+</body>
+</html>
